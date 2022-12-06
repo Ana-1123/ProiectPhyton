@@ -3,11 +3,59 @@ import select
 
 identities = []
 clients = []
+details_client1 = 'Jocul \"Spanzuratoare\"\nRolul pe care il aveti este de a trimite un cuvant cu o mica definitie,' \
+                  ' la cerere. Structura ce trebuie respectata este urmatoarea: scrieti cuvantul, doua puncte-:, ' \
+                  'un spatiu si definitia. De exemplu "ninsoare: Precipitație atmosferică sub formă de fulgi ' \
+                  'compuși din cristale de gheață"'
+details_client2 = 'Jocul \"Spanzuratoare\"\nRolul pe care il aveti este de ghici un cuvant. Vi se va oferi definitia ' \
+                  'acestuia. Veti trimite cate o litera si vi se va spune daca aceasta face face parte din cuvant ' \
+                  'sau nu, veti putea vizualiza si numarul de litere pe care il are cuvantul si literile ghicite ' \
+                  'corespunzator asezate. In cazul in care v-ati dat seama ce cuvant este, scrieti: Cuvantul intreg:' \
+                  ' cuvantul\nComenzi: Start game, Reset game, Details '
+word = []
+definition = ''
+wordscheme = []
+startgame = 0
+lives = 0
+
+
+def gameinit(givenword, givendefinition):
+    global word, wordscheme, definition
+    wordscheme = ['_' for x in givenword]
+    word = [x for x in givenword]
+    definition = givendefinition
 
 
 def process_data(sock, message):
-            print(message)
-            sock.send('Mesaj primit'.encode('utf-8'))
+    global word, definition, wordscheme, startgame, lives
+    position = clients.index(sock)
+    identity = identities[position]
+    if identity == 'client2':
+        if message.decode('utf-8') == 'Start game' or message.decode('utf-8') == 'Reset game':
+            startgame = 1
+            positiontosend = identities.index('client1')
+            clients[positiontosend].send('Trimite cuvant si definitie'.encode('utf-8'))
+        elif message.decode('utf-8') == 'Details':
+            sock.send(details_client2.encode('utf-8'))
+
+    else:
+        if message.decode('utf-8') != 'Pregatit':
+            if message.decode('utf-8') == 'Details':
+                sock.send(details_client1.encode('utf-8'))
+            else:
+                decodedmessage = message.decode('utf-8')
+                wordanddef = decodedmessage.split(':')
+                extractword = wordanddef[0]
+                extractdefinition = wordanddef[1]
+                positiontosend = identities.index('client2')
+                startgame = 1
+                if len(extractword) < 9:
+                    lives = len(extractword) - 1
+                else:
+                    lives = len(extractword) - 2
+                gameinit(extractword, extractdefinition)
+                message_to_send = extractdefinition + ' ' + ''.join(wordscheme) + str(lives)
+                clients[positiontosend].send(message_to_send.encode('utf-8'))
 
 
 if __name__ == "__main__":
