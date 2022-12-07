@@ -19,6 +19,20 @@ startgame = 0
 lives = 0
 
 
+def wordschemechange(letter):
+    global word, wordscheme, lives
+    gasit = 0
+    for i in range(0, len(word)):
+        if word[i] == letter:
+            wordscheme[i] = letter
+            gasit = 1
+    if gasit == 0:
+        lives -= 1
+    if wordscheme.count('_') == 0:
+        return 1
+    return 0
+
+
 def gameinit(givenword, givendefinition):
     global word, wordscheme, definition
     wordscheme = ['_' for x in givenword]
@@ -37,7 +51,23 @@ def process_data(sock, message):
             clients[positiontosend].send('Trimite cuvant si definitie'.encode('utf-8'))
         elif message.decode('utf-8') == 'Details':
             sock.send(details_client2.encode('utf-8'))
-
+        else:
+            if startgame == 1:
+                if len(message.decode('utf-8')) > 1:
+                    sock.send('Trimiteti o singura litera'.encode('utf-8'))
+                else:
+                    if wordschemechange(message.decode('utf-8')) == 1:
+                        sock.send('Felicitari ati ghicit cuvantul!'.encode('utf-8'))
+                        startgame = 0
+                    else:
+                        if lives >= 1:
+                            message_to_send = ''.join(wordscheme)
+                            message_to_send = message_to_send + str(lives)
+                        else:
+                            message_to_send = 'Ati pierdut jocul!'
+                        sock.send(message_to_send.encode('utf-8'))
+            else:
+                sock.send('Mai intai incepeti un nou joc. Comanda: Start game'.encode('utf-8'))
     else:
         if message.decode('utf-8') != 'Pregatit':
             if message.decode('utf-8') == 'Details':
@@ -73,7 +103,7 @@ if __name__ == "__main__":
     CONNECTION_LIST.append(server_socket)
 
     print("Game server started on port " + str(PORT))
-
+    end = 0
     while True:
         read_sockets, write_sockets, error_sockets = select.select(CONNECTION_LIST, [], [])
 
