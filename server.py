@@ -51,6 +51,24 @@ def process_data(sock, message):
             clients[positiontosend].send('Trimite cuvant si definitie'.encode('utf-8'))
         elif message.decode('utf-8') == 'Details':
             sock.send(details_client2.encode('utf-8'))
+        elif 'Cuvantul intreg:' in message.decode('utf-8'):
+            if startgame == 1:
+                decodedmessage = message.decode('utf-8')
+                extractguess = decodedmessage.split(': ')
+                wordguess = extractguess[1]
+                if wordguess == ''.join(word):
+                    sock.send('Felicitari ati ghicit cuvantul!'.encode('utf-8'))
+                    startgame = 0
+                else:
+                    scheme = ''.join(wordscheme)
+                    lives -= 1
+                    if lives >= 1:
+                        message_to_send = 'Cuvantul nu este corect\n' + scheme + str(lives)
+                    else:
+                        message_to_send = 'Cuvantul nu este corect. Ati pierdut jocul!'
+                    sock.send(message_to_send.encode('utf-8'))
+            else:
+                sock.send('Mai intai incepeti un nou joc. Comanda: Start game'.encode('utf-8'))
         else:
             if startgame == 1:
                 if len(message.decode('utf-8')) > 1:
@@ -80,7 +98,7 @@ def process_data(sock, message):
                 positiontosend = identities.index('client2')
                 startgame = 1
                 if len(extractword) < 9:
-                    lives = len(extractword) - 1
+                    lives = len(extractword)
                 else:
                     lives = len(extractword) - 2
                 gameinit(extractword, extractdefinition)
@@ -103,7 +121,7 @@ if __name__ == "__main__":
     CONNECTION_LIST.append(server_socket)
 
     print("Game server started on port " + str(PORT))
-    end = 0
+
     while True:
         read_sockets, write_sockets, error_sockets = select.select(CONNECTION_LIST, [], [])
 
@@ -124,6 +142,6 @@ if __name__ == "__main__":
                 try:
                     data = r_sock.recv(RECV_BUFFER)
                     if data:
-                        process_data(r_sock, data)
+                            process_data(r_sock, data)
                 except socket.error as e:
                     print(str(e))
